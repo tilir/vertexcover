@@ -81,6 +81,7 @@ template <typename G> int hopcroft_karp(G &g) {
 
   int matching = 0;
   auto nil = g.last_vertex();
+  auto enil = g.last_edge();
   vector<VD> U, V;
   map<VD, VD> PairU, PairV;
   map<VD, int> Dist;
@@ -99,6 +100,18 @@ template <typename G> int hopcroft_karp(G &g) {
       if (PairU[ud] == nil)
         if (hk_dfs(g, U, V, PairU, PairV, Dist, ud))
           matching = matching + 1;
+
+  // after pairing complete color edges
+  for (auto vdps : PairU) {
+    VD u = vdps.first;
+    VD v = vdps.second;
+    auto e = g.get_edge(u, v);
+    assert(e != enil);
+    e->load.color = 1;
+    auto ev = g.get_edge(v, u);
+    assert(ev != enil);
+    ev->load.color = 1;
+  }
 
   return matching;
 }
@@ -150,10 +163,8 @@ bool hk_dfs(G &g, vector<VD> &U, vector<VD> &V, map<VD, VD> &PairU,
       if (hk_dfs(g, U, V, PairU, PairV, Dist, PairV[v])) {
         PairV[v] = u;
         PairU[u] = v;
-        e->load.color = 1;
-        auto ev = g.get_sibling(e, u);
-        assert(ev != enil);
-        ev->load.color = 1;
+        // There is temptation to color edges here.
+        // This idea is bad. Mapping can change several times.
         return true;
       }
   }
@@ -201,6 +212,16 @@ template <typename G> int matching_to_cover(G &g) {
       vd->load.color = 1;
       vcsz += 1;
       remove_matching(g, vd, 0);
+    }
+
+  // little heuristic cleanup: move cover from deg-1 vertices
+  // this in general case improves ILPVC solution and decreases kernels
+  for (auto vd : g)
+    if (vd->load.color == 1 && vd->arcs && !vd->arcs->next) {
+      auto ud = vd->arcs->tip;
+      assert(ud->load.color == 0);
+      ud->load.color = 1;
+      vd->load.color = 0;
     }
 
   return vcsz;

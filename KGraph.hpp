@@ -73,15 +73,20 @@ template <typename EL, typename VT> struct Edge final {
 };
 
 template <typename VT, typename EL>
+static inline void add_link_to(VT *v1, VT *v2, EL l) {
+  using ET = Edge<EL, VT>;
+  ET *e12 = new ET(l, v2);
+  v1->link_to(v2, e12);
+}
+
+template <typename VT, typename EL>
 static inline void link(VT *v1, VT *v2, EL l) {
   assert(v1 && v2 && "Linking to null vertex is bad idea");
   // TODO: may be allocate edges in 2-blocks as in Knuth 4A
   //       but this will complicate deletion
   using ET = Edge<EL, VT>;
-  ET *e21 = new ET(l, v1);
-  ET *e12 = new ET(l, v2);
-  v1->link_to(v2, e12);
-  v2->link_to(v1, e21);
+  add_link_to(v1, v2, l);
+  add_link_to(v2, v1, l);
 }
 
 // mutable graph, heap only
@@ -118,7 +123,15 @@ public:
   VertexIterator end() { return vertices_.end(); }
   VertexDescriptor last_vertex() { return nullptr; }
   EdgeDescriptor last_edge() { return nullptr; }
+  ET *get_edge(VT *u, VT *v) {
+    assert(u && v && "Edge for null is bad idea");
+    for (auto eu = u->arcs; eu != nullptr; eu = eu->next)
+      if (eu->tip == v)
+        return eu;
+    return nullptr;
+  }
   ET *get_sibling(ET *e, VT *u) {
+    assert(e->tip != u);
     assert(e && u && "Sibling for null is bad idea too");
     // TODO: 2-blocks for edges will make this O(1) instead O(n)
     //       like: return ((e % 4) == 0) ? (e + 4) : (e - 4)
@@ -128,13 +141,20 @@ public:
         return ev;
     return nullptr;
   }
+  int degree(VT *u) {
+    assert(u != nullptr);
+    int deg = 0;
+    for (auto eu = u->arcs; eu != nullptr; eu = eu->next)
+      deg += 1;
+    return deg;
+  }
 
   // modifiable specifics
 public:
-  VT *add_default_vertex(void) {
+  int add_default_vertex(void) {
     VT *vert = new Vertex();
     vertices_.push_back(vert);
-    return vert;
+    return vertices_.size() - 1;
   }
 
   // link with default load
@@ -142,6 +162,21 @@ public:
     assert(i >= 0 && i < (int)vertices_.size());
     assert(j >= 0 && j < (int)vertices_.size());
     link(vertices_[i], vertices_[j], EL{});
+  }
+
+  void partial_cleanup(int nstart, int nend) {
+    assert(nstart < nend);
+    assert(nstart >= 0);
+    assert(nend <= vertices_.size());
+    for (auto vi = nstart; vi != nend; ++vi) {
+      for (ET *e = vertices_[vi]->arcs; e != nullptr;) {
+        ET *tmp = e->next;
+        delete e;
+        e = tmp;
+      }
+      delete vertices_[vi];
+    }
+    vertices_.erase(vertices_.begin() + nstart, vertices_.begin() + nend);
   }
 
   void cleanup() {
@@ -165,7 +200,8 @@ public:
   void add_path(int n) {
     VT *vcurr = nullptr;
     for (int vcount = 0; vcount < n; ++vcount) {
-      VT *vnext = add_default_vertex();
+      int inext = add_default_vertex();
+      VT *vnext = vertices_[inext];
       if (vcurr)
         link(vcurr, vnext, EL{});
       vcurr = vnext;
@@ -212,9 +248,33 @@ public:
         int nold = indexes[ed->tip];
         int nnew = nold + start;
         ed->tip = vertices_[nnew];
-        ET *e21 = new ET(EL{}, vertices_[i]);
-        vertices_[nnew]->link_to(vertices_[i], e21);
+        add_link_to(vertices_[nnew], vertices_[i], EL{});
       }
+  }
+
+  // brings {0,1}-colored bipartite back to {0,1,2}-colored graph
+  // color 1 is for 1/2 vertices of core task
+  template <typename C> void join_from_bipart(C colors_callback) {
+    int n = 0;
+    map<VertexDescriptor, int> indexes;
+    for (auto vd : vertices_)
+      indexes[vd] = n++;
+
+    int nall = vertices_.size();
+    assert((nall % 2) == 0);
+    int nhalf = nall / 2;
+    for (int idx = 0; idx != nhalf; ++idx) {
+      for (auto ed = vertices_[idx]->arcs; ed != nullptr; ed = ed->next) {
+        int tipold = indexes[ed->tip];
+        assert(tipold > nhalf - 1);
+        int tipnew = tipold - nhalf;
+        ed->tip = vertices_[tipnew];
+      }
+      colors_callback(vertices_[idx], vertices_[idx + nhalf]);
+    }
+
+    partial_cleanup(nhalf, nall);
+    assert(vertices_.size() == nhalf);
   }
 
   friend ostream &operator<<(ostream &stream, GraphBuilder &g) {

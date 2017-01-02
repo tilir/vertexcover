@@ -1,6 +1,6 @@
 //===-- KGInc.hpp -- common headers and using declarations ----------------===//
 //
-// This file is distributed under the GNU GPL v3 License. 
+// This file is distributed under the GNU GPL v3 License.
 // See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//

@@ -123,17 +123,36 @@ int test_vc(void) {
   GNFB.cleanup();
 
   GNFB.add_clique(3);
-  ofs.open("triangle.mps", ofstream::out | ofstream::trunc);
+  int nisol = GNFB.add_default_vertex();
+  GNFB.add_link(0, nisol);
+
+  ofs.open("mod_triangle.mps", ofstream::out | ofstream::trunc);
   out_mps_to_stream(ofs, GNFB);
   ofs.close();
 
-  ofs.open("triangle.dot", ofstream::out | ofstream::trunc);
+  ofs.open("mod_triangle.dot", ofstream::out | ofstream::trunc);
   ofs << GNFB << endl;
   ofs.close();
 
   GNFB.duplicate_to_bipart();
 
-  ofs.open("bipart_triangle.dot", ofstream::out | ofstream::trunc);
+  hopcroft_karp(GNFB);
+
+  ofs.open("mod_bipart_triangle.dot", ofstream::out | ofstream::trunc);
+  ofs << GNFB << endl;
+  ofs.close();
+
+  matching_to_cover(GNFB);
+
+  ofs.open("mod_bipart_triangle_colored.dot", ofstream::out | ofstream::trunc);
+  ofs << GNFB << endl;
+  ofs.close();
+
+  using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
+  GNFB.join_from_bipart(
+      [](VD vdst, VD vsrc) { vdst->load.color += vsrc->load.color; });
+
+  ofs.open("mod_triangle_joined.dot", ofstream::out | ofstream::trunc);
   ofs << GNFB << endl;
   ofs.close();
 

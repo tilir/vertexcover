@@ -11,7 +11,10 @@ CPP = $(wildcard *.cpp)
 # All .o files go to build dir.
 OBJ = $(CPP:%.cpp=$(BUILD_DIR)/%.o)
 
-PNG = path.png cycle.png clique.png bipart.png us.png hopcroft.png hopcroft_cover.png triangle.png bipart_triangle.png
+PNG = path.png cycle.png clique.png bipart.png us.png hopcroft.png \
+      hopcroft_cover.png mod_triangle.png mod_bipart_triangle.png \
+      three-component.png mod_bipart_triangle_colored.png \
+      mod_triangle_joined.png      
 
 # GCC/Clang will create these .d files containing dependencies.
 DEP = $(OBJ:%.o=%.d)
