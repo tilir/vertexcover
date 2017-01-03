@@ -1,4 +1,4 @@
-CXXFLAGS+=-O0 -g --std=c++14
+CXXFLAGS+=-O0 -g --std=c++14 -I./coresrc
 
 # Final binary
 BIN = gtest
@@ -6,23 +6,16 @@ BIN = gtest
 BUILD_DIR = ./build
 
 # List of all .cpp source files.
-CPP = $(wildcard *.cpp)
+CPP = $(wildcard coresrc/*.cpp) KGraph_tests.cpp
 
 # All .o files go to build dir.
 OBJ = $(CPP:%.cpp=$(BUILD_DIR)/%.o)
 
-PNG = path.png cycle.png clique.png bipart.png us.png hopcroft.png \
-      hopcroft_cover.png mod_triangle.png mod_bipart_triangle.png \
-      three-component.png mod_bipart_triangle_colored.png \
-      mod_triangle_joined.png      
-
 # GCC/Clang will create these .d files containing dependencies.
 DEP = $(OBJ:%.o=%.d)
 
-all: $(BIN) $(PNG)
-
-%.png : %.dot
-	dot -Tpng $< > $@
+all: $(BIN)  
+	./dot2pngs.sh
 
 # Default target named after the binary.
 $(BIN) : $(BUILD_DIR)/$(BIN)
@@ -44,8 +37,9 @@ $(BUILD_DIR)/%.o : %.cpp md
 .PHONY : md
 md :
 	mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/coresrc
 
 .PHONY : clean
 clean :
-	-rm $(BUILD_DIR)/$(BIN) $(OBJ) $(DEP) $(PNG)
+	-rm $(BUILD_DIR)/$(BIN) $(OBJ) $(DEP) *.dot
 

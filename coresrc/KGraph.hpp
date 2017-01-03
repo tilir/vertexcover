@@ -171,6 +171,9 @@ public:
     for (auto vi = nstart; vi != nend; ++vi) {
       for (ET *e = vertices_[vi]->arcs; e != nullptr;) {
         ET *tmp = e->next;
+        // TODO:
+        // ET *back = get_sibling (e, vertices_[vi]);
+        // delete back;
         delete e;
         e = tmp;
       }
@@ -234,7 +237,7 @@ public:
   }
 
   // duplicates current graph to create bipartite for LPVC
-  void duplicate_to_bipart() {
+  template <typename C> void duplicate_to_bipart(C colors_callback) {
     int start = vertices_.size();
     assert(start > 0 && "Not good idea doing this on empty graph");
     add_isolated(start);
@@ -250,6 +253,9 @@ public:
         ed->tip = vertices_[nnew];
         add_link_to(vertices_[nnew], vertices_[i], EL{});
       }
+
+    for (int i = 0; i != start; ++i)
+      colors_callback(vertices_[i]);
   }
 
   // brings {0,1}-colored bipartite back to {0,1,2}-colored graph

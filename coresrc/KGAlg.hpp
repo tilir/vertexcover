@@ -105,6 +105,12 @@ template <typename G> int hopcroft_karp(G &g) {
   for (auto vdps : PairU) {
     VD u = vdps.first;
     VD v = vdps.second;
+
+    // unmatched vertex
+    if ((v == nil) || (u == nil))
+      continue;
+    assert (PairU[u] == v);
+    assert (PairV[v] == u);
     auto e = g.get_edge(u, v);
     assert(e != enil);
     e->load.color = 1;

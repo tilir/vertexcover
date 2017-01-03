@@ -94,8 +94,31 @@ int test_bipart(void) {
   return 0;
 }
 
+int vc_routine(string gname) {
+  GraphBuilder<colorload, colorload> GNC;
+  using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
+  ifstream ifs;
+  ofstream ofs;
+  string ins = gname + string(".inp");
+  string outs = gname + string("_joined.dot");
+  ifs.open(ins, ifstream::in);
+  read_graph_from_stream(ifs, GNC);
+  ifs.close();
+  GNC.duplicate_to_bipart([](VD vdst) {vdst->load.color = 1; });
+  hopcroft_karp(GNC);
+  matching_to_cover(GNC);
+  GNC.join_from_bipart(
+      [](VD vdst, VD vsrc) { vdst->load.color += vsrc->load.color; });
+  ofs.open(outs, ofstream::out | ofstream::trunc);
+  ofs << GNC << endl;
+  ofs.close();
+  GNC.cleanup();
+}
+
 int test_vc(void) {
   GraphBuilder<colorload, colorload> GNC;
+  using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
+
   ifstream ifs;
   ifs.open("us.inp", ifstream::in);
   read_graph_from_stream(ifs, GNC);
@@ -111,53 +134,38 @@ int test_vc(void) {
   ofs.open("us.mps", ofstream::out | ofstream::trunc);
   out_mps_to_stream(ofs, GNC);
   ofs.close();
-
   GNC.cleanup();
 
-  GraphBuilder<colorload, colorload> GNFB;
-
-  GNFB.add_full_bipart(3, 3);
+  GNC.add_full_bipart(3, 3);
   ofs.open("bip.mps", ofstream::out | ofstream::trunc);
-  out_mps_to_stream(ofs, GNFB);
+  out_mps_to_stream(ofs, GNC);
   ofs.close();
-  GNFB.cleanup();
+  GNC.cleanup();
 
-  GNFB.add_clique(3);
-  int nisol = GNFB.add_default_vertex();
-  GNFB.add_link(0, nisol);
+  GNC.add_clique(3);
+  int nisol = GNC.add_default_vertex();
+  GNC.add_link(0, nisol);
 
   ofs.open("mod_triangle.mps", ofstream::out | ofstream::trunc);
-  out_mps_to_stream(ofs, GNFB);
+  out_mps_to_stream(ofs, GNC);
   ofs.close();
 
-  ofs.open("mod_triangle.dot", ofstream::out | ofstream::trunc);
-  ofs << GNFB << endl;
-  ofs.close();
+  GNC.duplicate_to_bipart([](VD vdst) {vdst->load.color = 1; });
+  hopcroft_karp(GNC);
+  matching_to_cover(GNC);
 
-  GNFB.duplicate_to_bipart();
-
-  hopcroft_karp(GNFB);
-
-  ofs.open("mod_bipart_triangle.dot", ofstream::out | ofstream::trunc);
-  ofs << GNFB << endl;
-  ofs.close();
-
-  matching_to_cover(GNFB);
-
-  ofs.open("mod_bipart_triangle_colored.dot", ofstream::out | ofstream::trunc);
-  ofs << GNFB << endl;
-  ofs.close();
-
-  using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
-  GNFB.join_from_bipart(
+  GNC.join_from_bipart(
       [](VD vdst, VD vsrc) { vdst->load.color += vsrc->load.color; });
 
   ofs.open("mod_triangle_joined.dot", ofstream::out | ofstream::trunc);
-  ofs << GNFB << endl;
+  ofs << GNC << endl;
   ofs.close();
 
-  GNFB.cleanup();
+  GNC.cleanup();
 
+  vc_routine("petersen");
+  vc_routine("chvatal");
+  vc_routine("us");
   return 0;
 }
 
