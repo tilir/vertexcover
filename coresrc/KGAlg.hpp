@@ -18,6 +18,8 @@
 //
 // vertex_2approx -- find 2-approximation for vertex cover in general graph
 //
+// vertex_cover_brute -- brute force vertex cover
+//
 // TODO: here shall also go crown decomposition and LPVC approximation
 //
 //===----------------------------------------------------------------------===//
@@ -109,8 +111,8 @@ template <typename G> int hopcroft_karp(G &g) {
     // unmatched vertex
     if ((v == nil) || (u == nil))
       continue;
-    assert (PairU[u] == v);
-    assert (PairV[v] == u);
+    assert(PairU[u] == v);
+    assert(PairV[v] == u);
     auto e = g.get_edge(u, v);
     assert(e != enil);
     e->load.color = 1;
@@ -272,6 +274,81 @@ template <typename G> void vertex_2approx(G &g) {
         break;
       }
   }
+}
+
+// all (k out of n) subsets without repetitions
+template <typename C> bool all_subsets(int n, int k, C callback) {
+  int idx;
+  vector<int> bitmask(k, 1);
+  bitmask.resize(n, 0);
+
+  do {
+    bool res = callback(bitmask);
+    if (res)
+      return true;
+  } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+
+  return false;
+}
+
+// naive approach (good for some tests)
+// callback to mark kernel
+// return 0 means always-no
+// return 1 means always-yes
+// return -1 means need to brute
+template <typename G, typename C> bool vertex_cover_brute(G &g, int k, C cbf) {
+  using VD = typename G::VertexDescriptor;
+  assert(k > 0);
+  int n = 0;
+  int nsel = 0;
+  map<VD, int> indexes;
+  auto enil = g.last_edge();
+  for (auto vd : g)
+    if (cbf(vd) == -1)
+      indexes[vd] = n++;
+
+  nsel = n;
+  vector<int> gmarks(nsel, 0);
+
+  for (auto vd : g) {
+    int s = cbf(vd);
+    if (s != -1) {
+      gmarks.push_back(s);
+      indexes[vd] = n++;
+    }
+  }
+
+  assert(n == g.nvertices());
+  assert(n == gmarks.size());
+
+  // all k-subsets from n
+  bool res = all_subsets(nsel, k, [&](vector<int> &marks) {
+    assert(marks.size() == nsel);
+
+    for (int i = 0; i < nsel; ++i)
+      gmarks[i] = marks[i];
+
+    for (auto vd : g) {
+      if (gmarks[indexes[vd]])
+        continue;
+      for (auto e = vd->arcs; e != enil; e = e->next)
+        if (!gmarks[indexes[e->tip]])
+          return false;
+    }
+
+    return true;
+  });
+
+  // TODO: one more callback for final color?
+  if (res) {
+    for (auto vd : g)
+      if (gmarks[indexes[vd]])
+        vd->load.color = 2;
+      else
+        vd->load.color = 0;
+  }
+
+  return res;
 }
 
 #endif

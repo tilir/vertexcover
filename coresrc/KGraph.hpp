@@ -117,6 +117,7 @@ public:
   using ET = typename Vertex::ET;
   using EdgeDescriptor = ET *;
   const char *name() const { return "G"; }
+  int nvertices() { return vertices_.size(); }
   VT *front() { return vertices_.front(); }
   VT *back() { return vertices_.back(); }
   VertexIterator begin() { return vertices_.begin(); }

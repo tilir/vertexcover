@@ -8,6 +8,7 @@
 #ifndef GRAPH_KINC_GUARD__
 #define GRAPH_KINC_GUARD__
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <forward_list>

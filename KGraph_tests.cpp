@@ -104,7 +104,7 @@ int vc_routine(string gname) {
   ifs.open(ins, ifstream::in);
   read_graph_from_stream(ifs, GNC);
   ifs.close();
-  GNC.duplicate_to_bipart([](VD vdst) {vdst->load.color = 1; });
+  GNC.duplicate_to_bipart([](VD vdst) { vdst->load.color = 1; });
   hopcroft_karp(GNC);
   matching_to_cover(GNC);
   GNC.join_from_bipart(
@@ -116,6 +116,7 @@ int vc_routine(string gname) {
 }
 
 int test_vc(void) {
+  bool res;
   GraphBuilder<colorload, colorload> GNC;
   using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
 
@@ -150,7 +151,7 @@ int test_vc(void) {
   out_mps_to_stream(ofs, GNC);
   ofs.close();
 
-  GNC.duplicate_to_bipart([](VD vdst) {vdst->load.color = 1; });
+  GNC.duplicate_to_bipart([](VD vdst) { vdst->load.color = 1; });
   hopcroft_karp(GNC);
   matching_to_cover(GNC);
 
@@ -166,6 +167,20 @@ int test_vc(void) {
   vc_routine("petersen");
   vc_routine("chvatal");
   vc_routine("us");
+
+  // brute-force test for petersen
+  ifs.open("petersen.inp", ifstream::in);
+  read_graph_from_stream(ifs, GNC);
+  ifs.close();
+  res = vertex_cover_brute(GNC, 5, [](VD vsrc) { return -1; });
+  assert(!res); // no 5-cover
+  res = vertex_cover_brute(GNC, 6, [](VD vsrc) { return -1; });
+  assert(res); // existing 6-cover
+  ofs.open("petersen_bruted_6.dot", ofstream::out | ofstream::trunc);
+  ofs << GNC << endl;
+  ofs.close();
+  GNC.cleanup();
+
   return 0;
 }
 
