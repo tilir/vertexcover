@@ -20,7 +20,7 @@
 //
 // vertex_cover_brute -- brute force vertex cover
 //
-// TODO: here shall also go crown decomposition and LPVC approximation
+// vertex_cover_trivial -- trivial solver (for max kernel degree = 2)
 //
 //===----------------------------------------------------------------------===//
 
@@ -346,6 +346,43 @@ template <typename G, typename C> bool vertex_cover_brute(G &g, int k, C cbf) {
         vd->load.color = 2;
       else
         vd->load.color = 0;
+  }
+
+  return res;
+}
+
+// callback cbf to get information
+// return 0 means marked-no
+// return 1 means marked-yes
+// return -1 means not marked yet
+// callback cmf to mark vertex as yes (1) or no (0)
+template <typename G, typename CI, typename CM>
+int vertex_cover_trivial(G &g, CI cbf, CM cmf) {
+  using VD = typename G::VertexDescriptor;
+  int res = 0;
+  auto nil = g.last_vertex();
+  auto enil = g.last_edge();
+
+  for (;;) {
+    VD pokevd = nil;
+    for (auto vd : g)
+      if (cbf(vd) == -1) {
+        pokevd = vd;
+        cmf(vd, 0);
+        int check_deg = 0;
+
+        for (auto e = vd->arcs; e != enil; e = e->next)
+          if (cbf(e->tip) == -1) {
+            check_deg += 1;
+            assert(check_deg < 3 &&
+                   "Trivial method works only for max. degree 2");
+            res += 1;
+            cmf(e->tip, 1);
+          }
+      }
+
+    if (pokevd == nil)
+      break;
   }
 
   return res;

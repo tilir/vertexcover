@@ -184,8 +184,44 @@ int test_vc(void) {
   return 0;
 }
 
+using VD = typename GraphBuilder<colorload, colorload>::VertexDescriptor;
+
+int standart_cbf(VD vsrc) {
+  int c = vsrc->load.color;
+  return (c == 0) ? 0 : (c == 2) ? 1 : -1;
+}
+
+void standart_cmf(VD vdst, int c) { 
+  vdst->load.color = (c > 0) ? 2 : 0; 
+}
+
+int test_bst(void) {
+  int n;
+  ofstream ofs;
+  GraphBuilder<colorload, colorload> GNC;
+  GNC.add_path(5);
+  GNC.add_path(6);
+  GNC.add_cycle(5);
+  GNC.add_cycle(6);
+
+  // mark all as kernel
+  for (auto vd : GNC)
+    vd->load.color = 1;
+
+  n = vertex_cover_trivial(GNC, standart_cbf, standart_cmf);
+  assert(n == 11);
+
+  ofs.open("trivial_solved.dot", ofstream::out | ofstream::trunc);
+  ofs << GNC << endl;
+  ofs.close();
+  GNC.cleanup();
+
+  return 0;
+}
+
 int main(void) {
   test_simple();
   test_bipart();
   test_vc();
+  test_bst();
 }
